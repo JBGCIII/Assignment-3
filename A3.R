@@ -11,10 +11,15 @@
 rm(list = ls())
 
 # Loading the necessary packages
-packages <- c("readxl", "urca", "vars", "bvarsv")
-# Make sure to install any packages you haven't installed yet using 
-# install.packages("name_of_the_package") in the console, then run:
-lapply(packages, library, character.only=TRUE)
+required_packages <- c("readxl", "urca", "vars", "bvarsv" )
+
+#Installs the packages that have not been installed
+installed <- required_packages %in% installed.packages()
+if (any(!installed)) {
+  install.packages(required_packages[!installed])
+}
+invisible(lapply(required_packages, library, character.only = TRUE))
+
 
 ##################### Loading and preparing the data ###########################
 # Load the data
@@ -69,14 +74,14 @@ tml <- paste0(floor(time(data)), "Q", (1+4*(time(data)-floor(time(data)))))
 t <- which(tml == "1998Q1") -22
 
 # Computing the impusle response function
-# png(filename = "irf_1998Q1.png", width = 600, height = 400, units = "px")
+png(filename = "irf_1998Q1.png", width = 600, height = 400, units = "px")
 irf_1998 <- impulse.responses(fit,
                               impulse.variable = 3, # oil price
                               response.variable = 1, # CPI
                               nhor = 18,
                               t = t,
                               scenario = 3)$irf
-# dev.off()
+dev.off()
 # The png() command creates a png file of the printed graph. Use dev.off() afterwards.
 
 # Dates for which we want IRF: 2010 Q1
@@ -84,28 +89,93 @@ irf_1998 <- impulse.responses(fit,
 t <- which(tml == "2010Q1") -22
 
 # Compute the impusle response function
-# png(filename = "irf_1998Q1.png", width = 600, height = 400, units = "px")
+png(filename = "irf_2010Q1.png", width = 600, height = 400, units = "px")
 irf_2010 <- impulse.responses(fit,
                               impulse.variable = 3, # oil price
                               response.variable = 1, # CPI
                               nhor = 18,
                               t = t,
                               scenario = 3)$irf
-# dev.off()
+dev.off()
 
 # Dates for which we want IRF: 2022 Q2
 # Create an index, subtract the lost observations (2 lags + 5 years training)
 t <- which(tml == "2022Q2") - 22
 
 # Compute the impusle response function
-# png(filename = "irf_1998Q1.png", width = 600, height = 400, units = "px")
+png(filename = "irf_2022Q1.png", width = 600, height = 400, units = "px")
 irf_2022 <- impulse.responses(fit,
                               impulse.variable = 3, # oil price
                               response.variable = 1, # CPI
                               nhor = 18,
                               t = t,
                               scenario = 3)$irf
-# dev.off()
+dev.off()
+
+############################### Run TVP-VAR [2] ####################################
+
+fit <- bvar.sv.tvp(data,
+                   p = 1,    # (i) number of lags decreased to 1
+                   tau = 24, # (ii) 6-year training sample = 24 quarters
+                   k_Q = 0.1, #(iii) increased variance of parameter evolution
+                   k_W = 0.1,
+                   k_S = 0.1, 
+                   nrep = 3000, 
+                   nburn = 1000,  
+                   thinfac = 1)  
+
+##################### Impulse response functions ###############################
+
+# Producing equivalents of Figure 2a and Figure 3a in Primiceri (2005):
+
+# Dates in string format for use below
+tml <- paste0(floor(time(data)), "Q", (1+4*(time(data)-floor(time(data)))))
+
+# Dates for which we want IRF: 1998 Q1
+# Create an index, subtract the lost observations (2 lags + 5 years training)
+t <- which(tml == "1998Q1") -22
+
+# Computing the impusle response function
+png(filename = "irf_1998Q1(2).png", width = 600, height = 400, units = "px")
+irf_1998 <- impulse.responses(fit,
+                              impulse.variable = 3, # oil price
+                              response.variable = 1, # CPI
+                              nhor = 18,
+                              t = t,
+                              scenario = 3)$irf
+dev.off()
+# The png() command creates a png file of the printed graph. Use dev.off() afterwards.
+
+# Dates for which we want IRF: 2010 Q1
+# Create an index, subtract the lost observations (2 lags + 5 years training)
+t <- which(tml == "2010Q1") -22
+
+# Compute the impusle response function
+png(filename = "irf_2010Q1(2).png", width = 600, height = 400, units = "px")
+irf_2010 <- impulse.responses(fit,
+                              impulse.variable = 3, # oil price
+                              response.variable = 1, # CPI
+                              nhor = 18,
+                              t = t,
+                              scenario = 3)$irf
+dev.off()
+
+# Dates for which we want IRF: 2022 Q2
+# Create an index, subtract the lost observations (2 lags + 5 years training)
+t <- which(tml == "2022Q2") - 22
+
+# Compute the impusle response function
+png(filename = "irf_2022Q1(2).png", width = 600, height = 400, units = "px")
+irf_2022 <- impulse.responses(fit,
+                              impulse.variable = 3, # oil price
+                              response.variable = 1, # CPI
+                              nhor = 18,
+                              t = t,
+                              scenario = 3)$irf
+dev.off()
+
+
+
 
 ######### Posterior means of the standard deviation of the residuals ###########
 
@@ -137,8 +207,10 @@ sd_l_cpi <- ts(sd_cpi[,3], start = c(1995,3), frequency = 4)
 
 # Construct a dataset and plot
 h1 <- ts.intersect(mean_sd_cpi, sd_u_cpi, sd_l_cpi)  
-ts.plot(h1, col = c("blue","red","red"), lty = c(1,2,2))
 
+png(filename = "ts_cpi.png", width = 600, height = 400, units = "px")
+ts.plot(h1, col = c("blue","red","red"), lty = c(1,2,2))
+dev.off()
 # Standard deviation of GDP residuals
 # Get posterior draws
 sd_gdp <- sqrt(fit$H.draws[2, aux+1, ])
@@ -149,9 +221,11 @@ mean_sd_gdp <- ts(sd_gdp[,2], start = c(1995,3), frequency = 4)
 sd_u_gdp <- ts(sd_gdp[,1], start = c(1995,3), frequency = 4)
 sd_l_gdp <- ts(sd_gdp[,3], start = c(1995,3), frequency = 4)
 
-h2 <- ts.intersect(mean_sd_gdp, sd_u_gdp, sd_l_gdp)  
-ts.plot(h2, col = c("blue","red","red"), lty = c(1,2,2))
 
+h2 <- ts.intersect(mean_sd_gdp, sd_u_gdp, sd_l_gdp)  
+png(filename = "ts_gdp.png", width = 600, height = 400, units = "px")
+ts.plot(h2, col = c("blue","red","red"), lty = c(1,2,2))
+dev.off()
 # Standard deviation of oil price residuals
 # Get posterior draws
 sd_oilp <- sqrt(fit$H.draws[3, aux+2, ])
@@ -163,5 +237,7 @@ sd_u_oilp <- ts(sd_oilp[,1], start = c(1995,3), frequency = 4)
 sd_l_oilp <- ts(sd_oilp[,3], start = c(1995,3), frequency = 4)
 
 h3 <- ts.intersect(mean_sd_oilp, sd_u_oilp, sd_l_oilp)  
+png(filename = "ts_oil.png", width = 600, height = 400, units = "px")
 ts.plot(h3, col = c("blue","red","red"), lty = c(1,2,2))
+dev.off()
 
