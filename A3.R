@@ -20,12 +20,9 @@ if (any(!installed)) {
 }
 invisible(lapply(required_packages, library, character.only = TRUE))
 
-
 ##################### Loading and preparing the data ###########################
 # Load the data
 data_raw <- read.csv(file = "Data3.csv", sep = ";") # ; is used to separate columns
-
-
 
 col_data <- 2:4
 ts_names <- c("OP", "dY", "dP")
@@ -173,8 +170,6 @@ irf_2022 <- impulse.responses(fit,
                               t = t,
                               scenario = 3)$irf
 dev.off()
-
-
 
 
 ######### Posterior means of the standard deviation of the residuals ###########
